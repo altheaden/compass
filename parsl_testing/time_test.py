@@ -7,15 +7,14 @@ from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import WorkQueueExecutor
 import time
-import os
 
 
-# App that generates a random number after a delay
+# App that sleeps for given time and then returns time slept
 @python_app
-def generate(delay, 
-            parsl_resource_specification={'cores': 1,
-                                          'memory': 100,
-                                          'disk': 10}):
+def generate(delay,
+             parsl_resource_specification={'cores': 1,
+                                           'memory': 100,
+                                           'disk': 10}):
     import time
     time.sleep(delay)
     return delay
@@ -33,7 +32,7 @@ if __name__ == '__main__':
         executors=[
             WorkQueueExecutor(
                 label='Chrysalis_WQEX',
-#                autolabel=True,  # Seems not to work very well
+                # autolabel=True,  # Seems not to work very well
                 autocategory=False,  # Set True if using autolabel
                 shared_fs=True,
                 provider=SlurmProvider(
@@ -63,7 +62,7 @@ if __name__ == '__main__':
     # Set delay and number of tasks
     delay = 15  # runtime per task in seconds
     num_tasks = 10
-    
+
     # Call generate method with given delay
     print("Begin execution timer...")
     start_ex = time.time()
@@ -78,14 +77,13 @@ if __name__ == '__main__':
     print(
         f"{num_tasks} tasks finished in {total_ex:.2f} seconds, "
         f"{(total_ex - delay):.2f} seconds longer than optimal time."
-     )
+    )
 
     # Display total time
     print(
-         "Total tracked runtime on node is "
+        "Total tracked runtime on node is "
         f"{(total_du + total_ex):.2f} seconds."
-     )
+    )
 
     dfk.cleanup()
     parsl.clear()
-
