@@ -30,13 +30,14 @@ def main():
                 label='Chrysalis_WQEX',
                 autolabel=USE_AUTO,
                 autocategory=USE_AUTO,
-                # shared_fs=True,
+                shared_fs = True,
                 provider=SlurmProvider(
                     partition='compute',  # Partition / QOS
                     nodes_per_block=1,
                     init_blocks=1,
                     worker_init=worker_init,
                     launcher=SrunLauncher(),
+                    scheduler_options='#SBATCH --job-name=ad.test',
                     walltime='02:00:00'
                 )
             )
@@ -75,7 +76,7 @@ def main():
 
 
 @python_app
-def import_data(num, inputs=[], outputs=[], 
+def import_data(num, inputs=[], outputs=[],
                 parsl_resource_specification={'cores': 1,
                                               'memory': 100,
                                               'disk': 10}):
@@ -83,9 +84,9 @@ def import_data(num, inputs=[], outputs=[],
         for line in f:
             df.write(line)
         df.write("new_data " * 5)
-    # print(f"File complete: {inputs[num]}")
     # import time
-    # time.sleep(1)
+    # time.sleep(15)
+    return
 
 
 if __name__ == '__main__':
