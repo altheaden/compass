@@ -10,26 +10,27 @@ from parsl.app.app import python_app
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import WorkQueueExecutor
-
 from parsl.data_provider.files import File
+
+
+# Global vars - ONLY visible to non-parsl functions
+USE_AUTO = True  # Controls values of autolabel and autocategory
 
 
 def main():
     # CHANGE if need be before running
-    compass_branch = '/home/ac.althea/code/compass/parsl_res_test/'
+    compass_branch = '/home/ac.althea/code/compass/parsl_df_test/'
     activation_script = 'load_dev_compass_1.0.0_chrysalis_intel_impi.sh'
     # Command to be run before starting a worker
     worker_init = f'source {compass_branch}/{activation_script}'
-
-    use_auto = True  # Controls values of autolabel and autocategory
 
     config = Config(
         executors=[
             WorkQueueExecutor(
                 label='Chrysalis_WQEX',
-                autolabel=use_auto,
-                autocategory=use_auto,
-                shared_fs=True,
+                autolabel=USE_AUTO,
+                autocategory=USE_AUTO,
+                # shared_fs=True,
                 provider=SlurmProvider(
                     partition='compute',  # Partition / QOS
                     nodes_per_block=1,
@@ -41,8 +42,6 @@ def main():
             )
         ]
     )
-
-    # config = Config()  # For limited local testing
 
     # load the Parsl config
     dfk = parsl.load(config)
@@ -66,7 +65,7 @@ def main():
         outputs.append(File(data_filename))
 
     for num in range(len(inputs)):
-        data_files = make_files(num=num, inputs=inputs, outputs=outputs)
+        data_files = import_data(num=num, inputs=inputs, outputs=outputs)
 
     with open(data_files.outputs[2].result(), 'r') as file:
         print(file.read())
@@ -76,14 +75,17 @@ def main():
 
 
 @python_app
-def make_files(num, inputs=[], outputs=[]):
-    # import time
-    # time.sleep(1)
+def import_data(num, inputs=[], outputs=[], 
+                parsl_resource_specification={'cores': 1,
+                                              'memory': 100,
+                                              'disk': 10}):
     with open(inputs[num], 'r') as f, open(outputs[num], 'w') as df:
         for line in f:
             df.write(line)
         df.write("new_data " * 5)
     # print(f"File complete: {inputs[num]}")
+    # import time
+    # time.sleep(1)
 
 
 if __name__ == '__main__':
