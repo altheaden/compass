@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
     Parsl DataFuture Test
 """
@@ -41,10 +42,11 @@ def main():
         ]
     )
 
+    # config = Config()  # For limited local testing
+
     # load the Parsl config
     dfk = parsl.load(config)
 
-    # TODO Update functionality start
     here = os.path.abspath(os.path.dirname(__file__))  # HPC compatible
     tempdir = os.path.join(here, 'temp')
     shutil.rmtree(tempdir, ignore_errors=True)
