@@ -7,12 +7,13 @@
 import shutil
 import parsl
 import os
+
+from parsl.data_provider.files import File
 from parsl.config import Config
 from parsl.app.app import python_app
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import WorkQueueExecutor
-from parsl.data_provider.files import File
 
 
 # Global vars - ONLY visible to non-parsl functions
@@ -61,14 +62,14 @@ def main():
         data_filename = os.path.join(tempdir, f'data_file_{num}.txt')
         with open(filename, 'w') as f:
             f.write("data " * 10)
-        inputs.append(File(filename))  # Must be Parsl File object (?)
+        inputs.append(File(filename))  # Must be Parsl File object
         outputs.append(File(data_filename))
 
     for num in range(len(inputs)):
         data_files = import_data(num=num, inputs=inputs, outputs=outputs)
 
     inputs = data_files.outputs
-    outputs[0] = os.path.join(tempdir, "analysis.txt")
+    outputs[0] = File(os.path.join(tempdir, "analysis.txt"))
     analysis = analyze(inputs=inputs, outputs=outputs)
 
     with open(analysis.outputs[0].result(), 'r') as f:
@@ -87,6 +88,8 @@ def import_data(num, inputs=[], outputs=[],
         for line in f:
             df.write(line)
         df.write("new_data " * 5)
+    import time
+    time.sleep(5)
     return
 
 
@@ -98,7 +101,7 @@ def analyze(inputs=[], outputs=[],
     for num in range(len(inputs)):
         with open(inputs[num], 'r') as f, open(outputs[0], 'a') as a:
             for line in f:
-                a.write(f"{num}. {line}\n")
+                a.write(f"{num + 1}. {line}\n")
     return
 
 
