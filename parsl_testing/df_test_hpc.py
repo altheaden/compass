@@ -52,26 +52,30 @@ def main():
     here = os.path.abspath(os.path.dirname(__file__))  # HPC compatible
     tempdir = os.path.join(here, 'temp')
     shutil.rmtree(tempdir, ignore_errors=True)
-    os.mkdir(tempdir)  # Temp directory where outputs and inputs will be stored
+    os.mkdir(tempdir)  # Temp directory for all files
 
-    inputs = []
-    outputs = []
+    inputs = []   # main() lists for housing data futures
+    outputs = []  # parsl files only mutate their own copies
 
     for num in range(10):
         filename = os.path.join(tempdir, f'file_{num}.txt')
         data_filename = os.path.join(tempdir, f'data_file_{num}.txt')
         with open(filename, 'w') as f:
-            f.write("data " * 10)
-        inputs.append(File(filename))  # Must be Parsl File object
-        outputs.append(File(data_filename))
+            f.write(f'{"data "*10}\n')  # very important scientific data
+        inputs.append(File(filename))
+        outputs.append(File(data_filename))  # must be Parsl File objects
 
+    # call import_data() sending Files for input and output
     for num in range(len(inputs)):
         data_files = import_data(num=num, inputs=inputs, outputs=outputs)
 
+    # output Files are DataFutures until they are completed
     inputs = data_files.outputs
     outputs[0] = File(os.path.join(tempdir, "analysis.txt"))
+    # use main() outputs/inputs lists for readability (?)
     analysis = analyze(inputs=inputs, outputs=outputs)
 
+    # print analysis
     with open(analysis.outputs[0].result(), 'r') as f:
         print(f.read())
 
@@ -79,6 +83,9 @@ def main():
     parsl.clear()
 
 
+"""
+Create new files that have old data plus important new data
+"""
 @python_app
 def import_data(num, inputs=[], outputs=[],
                 parsl_resource_specification={'cores': 1,
@@ -87,12 +94,13 @@ def import_data(num, inputs=[], outputs=[],
     with open(inputs[num], 'r') as f, open(outputs[num], 'w') as df:
         for line in f:
             df.write(line)
-        df.write("new_data " * 5)
-    import time
-    time.sleep(5)
+        df.write(f'{"new data "*5}\n')
     return
 
 
+"""
+Analyze results somehow by concatenating them into one file
+"""
 @python_app
 def analyze(inputs=[], outputs=[],
             parsl_resource_specification={'cores': 1,
@@ -100,8 +108,9 @@ def analyze(inputs=[], outputs=[],
                                           'disk': 10}):
     for num in range(len(inputs)):
         with open(inputs[num], 'r') as f, open(outputs[0], 'a') as a:
+            a.write(f'{num+1}:\n')
             for line in f:
-                a.write(f"{num + 1}. {line}\n")
+                a.write(f'\t{line}')
     return
 
 
