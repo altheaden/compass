@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+
 """
-    Parsl DataFuture Test
+    Parsl DataFuture Test on HPC
 """
+
 import shutil
 import parsl
 import os
@@ -30,7 +32,6 @@ def main():
                 label='Chrysalis_WQEX',
                 autolabel=USE_AUTO,
                 autocategory=USE_AUTO,
-                shared_fs = True,
                 provider=SlurmProvider(
                     partition='compute',  # Partition / QOS
                     nodes_per_block=1,
@@ -60,16 +61,18 @@ def main():
         data_filename = os.path.join(tempdir, f'data_file_{num}.txt')
         with open(filename, 'w') as f:
             f.write("data " * 10)
-        with open(data_filename, 'w') as df:
-            df.write(" ")  # Seems like all files must exist first (?)
         inputs.append(File(filename))  # Must be Parsl File object (?)
         outputs.append(File(data_filename))
 
     for num in range(len(inputs)):
         data_files = import_data(num=num, inputs=inputs, outputs=outputs)
 
-    with open(data_files.outputs[2].result(), 'r') as file:
-        print(file.read())
+    inputs = data_files.outputs
+    outputs[0] = os.path.join(tempdir, "analysis.txt")
+    analysis = analyze(inputs=inputs, outputs=outputs)
+
+    with open(analysis.outputs[0].result(), 'r') as f:
+        print(f.read())
 
     dfk.cleanup()
     parsl.clear()
@@ -84,8 +87,18 @@ def import_data(num, inputs=[], outputs=[],
         for line in f:
             df.write(line)
         df.write("new_data " * 5)
-    # import time
-    # time.sleep(15)
+    return
+
+
+@python_app
+def analyze(inputs=[], outputs=[],
+            parsl_resource_specification={'cores': 1,
+                                          'memory': 100,
+                                          'disk': 10}):
+    for num in range(len(inputs)):
+        with open(inputs[num], 'r') as f, open(outputs[0], 'a') as a:
+            for line in f:
+                a.write(f"{num}. {line}\n")
     return
 
 
