@@ -190,7 +190,8 @@ def run_suite(suite_name, quiet=False):
             sys.exit(1)
 
 
-def run_test_case(steps_to_run=None, steps_not_to_run=None):
+def run_test_case(steps_to_run=None, steps_not_to_run=None,
+                  log_everything=False):
     """
     Used by the framework to run a test case when ``compass run`` gets called
     in the test case's work directory
@@ -204,6 +205,9 @@ def run_test_case(steps_to_run=None, steps_not_to_run=None):
     steps_not_to_run : list of str, optional
         A list of steps not to run.  Typically, these are steps to remove from
         the defaults
+
+    log_everything : bool, optional
+        Whether to make all output go to a log file instead of stdout/stderr
     """
     with open('test_case.pickle', 'rb') as handle:
         test_case = pickle.load(handle)
@@ -241,10 +245,17 @@ def run_test_case(steps_to_run=None, steps_not_to_run=None):
 
     test_case.steps_to_run = steps_to_run
 
-    # start logging to stdout/stderr
+    if log_everything:
+        log_filename = f'{test_case.name}.log'
+        test_case.new_step_log_file = False
+        test_case.log_filename = log_filename
+    else:
+        log_filename = None
+        test_case.new_step_log_file = True
+
+    # start logging to stdout/stderr or a log file
     test_name = test_case.path.replace('/', '_')
-    test_case.new_step_log_file = True
-    with LoggingContext(name=test_name) as logger:
+    with LoggingContext(name=test_name, log_filename=log_filename) as logger:
         test_case.logger = logger
         test_case.stdout_logger = logger
         logger.info('Running steps: {}'.format(', '.join(steps_to_run)))
@@ -252,10 +263,16 @@ def run_test_case(steps_to_run=None, steps_not_to_run=None):
         test_case.validate()
 
 
-def run_step():
+def run_step(log_everything=False):
     """
     Used by the framework to run a step when ``compass run`` gets called in the
     step's work directory
+
+    Parameters
+    ----------
+    log_everything : bool, optional
+        Whether to make all output go to a log file instead of stdout/stderr
+
     """
     with open('step.pickle', 'rb') as handle:
         test_case, step = pickle.load(handle)
@@ -272,9 +289,15 @@ def run_step():
     mpas_tools.io.default_format = config.get('io', 'format')
     mpas_tools.io.default_engine = config.get('io', 'engine')
 
-    # start logging to stdout/stderr
+    if log_everything:
+        log_filename = f'{step.name}.log'
+        step.log_filename = log_filename
+    else:
+        log_filename = None
+
+    # start logging to stdout/stderr or a log file
     test_name = step.path.replace('/', '_')
-    with LoggingContext(name=test_name) as logger:
+    with LoggingContext(name=test_name, log_filename=log_filename) as logger:
         test_case.logger = logger
         test_case.stdout_logger = None
         test_case.run()
@@ -298,13 +321,17 @@ def main():
                              "output as the test suite progresses.  Has no "
                              "effect when running test cases or steps on "
                              "their own.")
+    parser.add_argument("-l", "--log_everything", dest="log_everything",
+                        action="store_true",
+                        help="If set and running a test case or step, all"
+                             "output will go to a log file instead of stdout.")
     args = parser.parse_args(sys.argv[2:])
     if args.suite is not None:
         run_suite(args.suite, quiet=args.quiet)
     elif os.path.exists('test_case.pickle'):
-        run_test_case(args.steps, args.no_steps)
+        run_test_case(args.steps, args.no_steps, args.log_everything)
     elif os.path.exists('step.pickle'):
-        run_step()
+        run_step(args.log_everything)
     else:
         pickles = glob.glob('*.pickle')
         if len(pickles) == 1:
