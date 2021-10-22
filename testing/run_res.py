@@ -16,16 +16,16 @@ mesh = args.mesh
 os.chdir(f"{mesh}/mesh")
 #cmd_args = "srun -c 1 -n 1 -N 1 --mem 10G --tasks-per-node 1 compass run".split()
 print(f"{mesh}: mesh")
-cmd_args = ["compass", "run"]
+cmd_args = ["compass", "run", "-l"]
 subprocess.check_call(cmd_args)
 
 os.chdir(f"../init")
 print(f"{mesh}: init")
-cmd_args = ["compass", "run"]
+cmd_args = ["compass", "run", "-l"]
 subprocess.check_call(cmd_args)
 
 os.chdir(f"../forward")
 print(f"{mesh}: forward")
-cmd_args = ["compass", "run"]
+cmd_args = ["compass", "run", "-l"]
 subprocess.check_call(cmd_args)
 
