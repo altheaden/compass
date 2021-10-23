@@ -1,6 +1,6 @@
 import time
 
-from compass.model import run_model
+from compass.model import add_model_substeps
 from compass.step import Step
 
 
@@ -28,8 +28,8 @@ class Forward(Step):
             The resolution of the (uniform) mesh in km
         """
         super().__init__(test_case=test_case,
-                         name='QU{}_forward'.format(resolution),
-                         subdir='QU{}/forward'.format(resolution))
+                         name=f'QU{resolution}_forward',
+                         subdir=f'QU{resolution}/forward')
 
         self.resolution = resolution
 
@@ -48,9 +48,9 @@ class Forward(Step):
         self.add_input_file(filename='graph.info',
                             target='../mesh/graph.info')
 
-        self.add_model_as_input()
-
         self.add_output_file(filename='output.nc')
+
+        add_model_substeps(step=self)
 
     def setup(self):
         """
@@ -58,6 +58,19 @@ class Forward(Step):
         """
         dt = self.get_dt()
         self.add_namelist_options({'config_dt': dt})
+
+    def runtime_setup(self):
+        """
+        Set model resources based on config options
+        """
+        resolution = self.resolution
+        config = self.config
+        ntasks = config.getint('cosine_bell',
+                               f'QU{resolution}_cores')
+        min_tasks = config.getint('cosine_bell',
+                                  f'QU{resolution}_min_cores')
+        substep = self.substeps['model']
+        substep.set_model_resources(ntasks=ntasks, min_tasks=min_tasks)
 
     def run(self):
         """
@@ -68,8 +81,6 @@ class Forward(Step):
         dt = self.get_dt()
         self.update_namelist_at_runtime(options={'config_dt': dt},
                                         out_name='namelist.ocean')
-
-        run_model(self)
 
     def get_dt(self):
         """

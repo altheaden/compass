@@ -1,4 +1,4 @@
-from compass.model import run_model
+from compass.model import add_model_substeps
 from compass.step import Step
 
 
@@ -20,9 +20,9 @@ class Init(Step):
         """
 
         super().__init__(test_case=test_case,
-                         name='QU{}_init'.format(resolution),
-                         subdir='QU{}/init'.format(resolution),
-                         cores=36, min_cores=1)
+                         name=f'QU{resolution}_init',
+                         subdir=f'QU{resolution}/init',
+                         add_default_substep=False)
 
         package = 'compass.ocean.tests.global_convergence.cosine_bell'
 
@@ -33,13 +33,8 @@ class Init(Step):
 
         self.add_input_file(filename='graph.info', target='../mesh/graph.info')
 
-        self.add_model_as_input()
-
         self.add_output_file(filename='namelist.ocean')
         self.add_output_file(filename='initial_state.nc')
 
-    def run(self):
-        """
-        Run this step of the testcase
-        """
-        run_model(self)
+        add_model_substeps(step=self, ntasks=36, min_tasks=1, openmp_threads=1,
+                           mem='1G')

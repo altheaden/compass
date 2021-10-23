@@ -53,22 +53,6 @@ class CosineBell(TestCase):
 
         self.update_cores()
 
-    def run(self):
-        """
-        Run each step of the testcase
-        """
-        config = self.config
-        for resolution in self.resolutions:
-            cores = config.getint('cosine_bell', f'QU{resolution}_cores')
-            min_cores = config.getint('cosine_bell',
-                                      f'QU{resolution}_min_cores')
-            step = self.steps[f'QU{resolution}_forward']
-            step.cores = cores
-            step.min_cores = min_cores
-
-        # run the step
-        super().run()
-
     def update_cores(self):
         """ Update the number of cores and min_cores for each forward step """
 
@@ -90,8 +74,9 @@ class CosineBell(TestCase):
             min_cores = max(1,
                             round(approx_cells / max_cells_per_core))
             step = self.steps[f'QU{resolution}_forward']
-            step.cores = cores
-            step.min_cores = min_cores
+            substep = step.substeps['model']
+            substep.ntasks = cores
+            substep.min_tasks = min_cores
 
             config.set('cosine_bell', f'QU{resolution}_cores', str(cores),
                        comment=f'Target core count for {resolution} km mesh')
