@@ -55,9 +55,9 @@ class RpeTest(TestCase):
         for index, nu in enumerate(nus):
             name = 'rpe_test_{}_nu_{}'.format(index + 1, nu)
             step = Forward(
-                test_case=self, name=name, subdir=name, cores=params['cores'],
-                min_cores=params['min_cores'], resolution=resolution,
-                nu=float(nu))
+                test_case=self, name=name, subdir=name,
+                ntasks=params['cores'], min_tasks=params['min_cores'],
+                resolution=resolution, nu=float(nu))
 
             step.add_namelist_file(
                 'compass.ocean.tests.baroclinic_channel.rpe_test',

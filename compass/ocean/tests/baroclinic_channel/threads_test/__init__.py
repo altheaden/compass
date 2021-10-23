@@ -40,8 +40,8 @@ class ThreadsTest(TestCase):
         for threads in [1, 2]:
             name = '{}thread'.format(threads)
             self.add_step(
-                Forward(test_case=self, name=name, subdir=name, cores=4,
-                        threads=threads, resolution=resolution))
+                Forward(test_case=self, name=name, subdir=name, ntasks=4,
+                        openmp_threads=threads, resolution=resolution))
 
     def configure(self):
         """

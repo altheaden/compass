@@ -1,4 +1,4 @@
-from compass.model import run_model
+from compass.model import add_model_substeps
 from compass.step import Step
 
 
@@ -13,7 +13,8 @@ class Forward(Step):
         The resolution of the test case
     """
     def __init__(self, test_case, resolution, name='forward', subdir=None,
-                 cores=1, min_cores=None, threads=1, nu=None):
+                 ntasks=1, min_tasks=None, openmp_threads=1, mem='1GB',
+                 nu=None):
         """
         Create a new test case
 
@@ -31,26 +32,31 @@ class Forward(Step):
         subdir : str, optional
             the subdirectory for the step.  The default is ``name``
 
-        cores : int, optional
-            the number of cores the step would ideally use.  If fewer cores
-            are available on the system, the step will run on all available
-            cores as long as this is not below ``min_cores``
+        ntasks : int, optional
+            the target number of tasks to ideally use to run the model. If too
+            few cores are available on the system to accommodate the number of
+            tasks and the number of cores per task, the substep will run on
+            fewer tasks as long as as this is not below ``min_tasks``
 
-        min_cores : int, optional
-            the number of cores the step requires.  If the system has fewer
-            than this number of cores, the step will fail
+        min_tasks : int, optional
+            the number of tasks required to run the model.  If the system has
+            too few cores to accommodate the number of tasks and cores per
+            task, the step will fail
 
-        threads : int, optional
-            the number of threads the step will use
+        openmp_threads : int, optional
+            the number of OpenMP threads to use
+
+        mem : str, optional
+            the amount of memory that the substep is allowed to use
 
         nu : float, optional
             the viscosity (if different from the default for the test group)
         """
         self.resolution = resolution
-        if min_cores is None:
-            min_cores = cores
+        if min_tasks is None:
+            min_tasks = ntasks
         super().__init__(test_case=test_case, name=name, subdir=subdir,
-                         cores=cores, min_cores=min_cores, threads=threads)
+                         add_default_substep=False)
         self.add_namelist_file('compass.ocean.tests.baroclinic_channel',
                                'namelist.forward')
         self.add_namelist_file('compass.ocean.tests.baroclinic_channel',
@@ -71,14 +77,9 @@ class Forward(Step):
         self.add_input_file(filename='graph.info',
                             target='../initial_state/culled_graph.info')
 
-        self.add_model_as_input()
-
         self.add_output_file(filename='output.nc')
 
-    # no setup() is needed
+        add_model_substeps(step=self, ntasks=ntasks, min_tasks=min_tasks,
+                           openmp_threads=openmp_threads, mem=mem)
 
-    def run(self):
-        """
-        Run this step of the test case
-        """
-        run_model(self)
+    # no setup() or run() is needed
