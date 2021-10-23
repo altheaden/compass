@@ -1,8 +1,8 @@
 import os
 
 from mpas_tools.logging import LoggingContext
-from compass.parallel import get_available_cores_and_nodes
 from compass.logging import log_method_call
+from compass.parallel import get_available_cores_and_nodes, run_command
 
 
 class TestCase:
@@ -241,13 +241,33 @@ class TestCase:
         logger = self.logger
         config = self.config
         cwd = os.getcwd()
+        os.chdir(step.work_dir)
+        # this call may update the resources for substeps based on config
+        # options so we need to run it before we determine the resources
+        step.runtime_setup()
         available_cores, _ = get_available_cores_and_nodes(config)
-        step.cores = min(step.cores, available_cores)
-        if step.min_cores is not None:
-            if step.cores < step.min_cores:
+        # need to iterate over all substeps because some substeps make use of
+        # resource constraints from other steps
+        for substep_name, substep in step.substeps.items():
+            if substep.ntasks == 1:
+                # just one task so only need to worry about cpus_per_task
+                substep.cpus_per_task = min(substep.cpus_per_task,
+                                            available_cores)
+                cores = substep.cpus_per_task
+            elif substep.cpus_per_task == substep.min_cpus_per_task:
+                available_tasks = available_cores//substep.cpus_per_task
+                substep.ntasks = min(substep.ntasks, available_tasks)
+                cores = substep.ntasks*substep.cpus_per_task
+            else:
+                raise ValueError('Unsupported substep configuration in which '
+                                 'ntasks > 1 and  '
+                                 'cpus_per_task != min_cpus_per_task')
+
+            min_cores = substep.min_cpus_per_task*substep.min_tasks
+            if cores < min_cores:
                 raise ValueError(
-                    'Available cores ({}) is below the minimum of {}'
-                    ''.format(step.cores, step.min_cores))
+                    f'Available cores ({cores}) is below the minimum of '
+                    f'{min_cores} for substep {substep.name}')
 
         missing_files = list()
         for input_file in step.inputs:
@@ -271,11 +291,19 @@ class TestCase:
         with LoggingContext(name=test_name, logger=step_logger,
                             log_filename=log_filename) as step_logger:
             step.logger = step_logger
-            os.chdir(step.work_dir)
-            step_logger.info('')
-            log_method_call(method=step.run, logger=step_logger)
-            step_logger.info('')
-            step.run()
+            for substep_name in step.substeps_to_run:
+                substep = step.substeps[substep_name]
+                if substep.args is not None:
+                    step_logger.info('')
+                    run_command(substep.args, substep.cpus_per_task,
+                                substep.ntasks, substep.openmp_threads,
+                                substep.mem, config, step_logger)
+                    step_logger.info('')
+                else:
+                    step_logger.info('')
+                    log_method_call(method=substep.run, logger=step_logger)
+                    step_logger.info('')
+                    substep.run()
 
         missing_files = list()
         for output_file in step.outputs:
