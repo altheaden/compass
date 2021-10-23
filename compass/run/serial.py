@@ -223,15 +223,23 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
             sys.exit(1)
 
 
-def run_step():
+def run_step(substep=None):
     """
     Used by the framework to run a step when ``compass run`` gets called in the
     step's work directory
+
+    Parameters
+    ----------
+    substep : str or None, optional
+        The name of a substep to run on its own
     """
     with open('step.pickle', 'rb') as handle:
         test_case, step = pickle.load(handle)
     test_case.steps_to_run = [step.name]
     test_case.new_step_log_file = False
+
+    if substep is not None:
+        step.substeps_to_run = [substep]
 
     config = CompassConfigParser()
     config.add_from_file(step.config_filename)
@@ -271,6 +279,8 @@ def main():
     parser.add_argument("--no-steps", dest="no_steps", nargs='+', default=None,
                         help="The steps of a test case not to run, see "
                              "steps_to_run in the config file for defaults.")
+    parser.add_argument("--substep", dest="substep", default=None,
+                        help="The substep of a step to run")
     parser.add_argument("-q", "--quiet", dest="quiet", action="store_true",
                         help="If set, step names are not included in the "
                              "output as the test suite progresses.  Has no "
@@ -283,7 +293,7 @@ def main():
         run_tests(suite_name='test_case', quiet=args.quiet, is_test_case=True,
                   steps_to_run=args.steps, steps_not_to_run=args.no_steps)
     elif os.path.exists('step.pickle'):
-        run_step()
+        run_step(args.substep)
     else:
         pickles = glob.glob('*.pickle')
         if len(pickles) == 1:
