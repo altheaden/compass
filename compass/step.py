@@ -6,14 +6,14 @@ import numpy
 import stat
 import grp
 import progressbar
-from abc import ABC, abstractmethod
 
 from compass.io import download, symlink
 import compass.namelist
 import compass.streams
+from compass.substep import DefaultSubstep
 
 
-class Step(ABC):
+class Step:
     """
     The base class for a step of a test cases, such as setting up a mesh,
     creating an initial condition, or running the MPAS core forward in time.
@@ -39,6 +39,14 @@ class Step(ABC):
     mpas_core : compass.MpasCore
         The MPAS core the test group belongs to
 
+    substeps : dict of compass.Substep
+        A dictionary of substeps that make up this step with subtask names as
+        keys.  By default, there is only one substep that runs this step's
+        ``run()`` method
+
+    substeps_to_run : list of str
+        A list of the names of substeps to run by default
+
     subdir : str
         the subdirectory for the step
 
@@ -46,28 +54,6 @@ class Step(ABC):
         the path within the base work directory of the step, made up of
         ``mpas_core``, ``test_group``, the test case's ``subdir`` and the
         step's ``subdir``
-
-    cores : int
-        the number of cores the step would ideally use.  If fewer cores
-        are available on the system, the step will run on all available
-        cores as long as this is not below ``min_cores``
-
-    min_cores : int
-        the number of cores the step requires.  If the system has fewer
-        than this number of cores, the step will fail
-
-    threads : int
-        the number of threads the step will use
-
-    max_memory : int
-        the amount of memory that the step is allowed to use in MB.
-        This is currently just a placeholder for later use with task
-        parallelism
-
-    max_disk : int
-        the amount of disk space that the step is allowed to use in MB.
-        This is currently just a placeholder for later use with task
-        parallelism
 
     input_data : list of dict
         a list of dict used to define input files typically to be
@@ -123,8 +109,10 @@ class Step(ABC):
         cached outputs for this MPAS core
     """
 
-    def __init__(self, test_case, name, subdir=None, cores=1, min_cores=1,
-                 threads=1, max_memory=1000, max_disk=1000, cached=False):
+    def __init__(self, test_case, name, subdir=None, cpus_per_task=1,
+                 min_cpus_per_task=1, ntasks=1, min_tasks=1,
+                 openmp_threads=1, mem='1G', cached=False,
+                 add_default_substep=True):
         """
         Create a new test case
 
@@ -139,31 +127,41 @@ class Step(ABC):
         subdir : str, optional
             the subdirectory for the step.  The default is ``name``
 
-        cores : int, optional
-            the number of cores the step would ideally use.  If fewer cores
-            are available on the system, the step will run on all available
-            cores as long as this is not below ``min_cores``
+        cpus_per_task : int, optional
+            the number of cores per task the substep would ideally use.  If
+            fewer cores per node are available on the system, the substep will
+            run on all available cores as long as this is not below
+            ``min_cpus_per_task``
 
-        min_cores : int, optional
-            the number of cores the step requires.  If the system has fewer
-            than this number of cores, the step will fail
+        min_cpus_per_task : int, optional
+            the number of cores per task the substep requires.  If the system
+            has fewer than this number of cores per node, the step will fail
 
-        threads : int, optional
-            the number of threads the step will use
+        ntasks : int, optional
+            the number of tasks the substep would ideally use.  If too few
+            cores are available on the system to accommodate the number of
+            tasks and the number of cores per task, the substep will run on
+            fewer tasks as long as as this is not below ``min_tasks``
 
-        max_memory : int, optional
-            the amount of memory that the step is allowed to use in MB.
-            This is currently just a placeholder for later use with task
-            parallelism
+        min_tasks : int, optional
+            the number of tasks the substep requires.  If the system has too
+            few cores to accommodate the number of tasks and cores per task,
+            the step will fail
 
-        max_disk : int, optional
-            the amount of disk space that the step is allowed to use in MB.
-            This is currently just a placeholder for later use with task
-            parallelism
+        openmp_threads : int
+            the number of OpenMP threads to use
+
+        mem : str, optional
+            the amount of memory that the step is allowed to use
 
         cached : bool, optional
             Whether to get all of the outputs for the step from the database of
             cached outputs for this MPAS core
+
+        add_default_substep : bool, optional
+            Whether to add a default substep that calls the step's ``run()``
+            method.  Steps that don't override the ``run()`` method can save
+            some overhead by setting this to ``False``.
         """
         self.name = name
         self.test_case = test_case
@@ -174,14 +172,18 @@ class Step(ABC):
         else:
             self.subdir = name
 
-        self.cores = cores
-        self.min_cores = min_cores
-        self.threads = threads
-        self.max_memory = max_memory
-        self.max_disk = max_disk
-
         self.path = os.path.join(self.mpas_core.name, self.test_group.name,
                                  test_case.subdir, self.subdir)
+
+        self.substeps = dict()
+        self.substeps_to_run = list()
+        if add_default_substep:
+            self.substeps['default'] = DefaultSubstep(
+                step=self, cpus_per_task=cpus_per_task,
+                min_cpus_per_task=min_cpus_per_task, ntasks=ntasks,
+                min_tasks=min_tasks, openmp_threads=openmp_threads, mem=mem)
+
+            self.substeps_to_run.append('default')
 
         # child steps (or test cases) will add to these
         self.input_data = list()
@@ -213,13 +215,33 @@ class Step(ABC):
         """
         pass
 
-    @abstractmethod
+    def runtime_setup(self):
+        """
+        Update attributes of the step at runtime before calling substeps.  This
+        is necessary for attributes that will be used across several substeps
+        and which aren't known at setup time (e.g. they come from config
+        options that the user might change).
+        """
+        pass
+
     def run(self):
         """
         Run the step.  Every child class must override this method to perform
         the main work.
         """
         pass
+
+    def add_substep(self, substep):
+        """
+        Add a substep to this step
+
+        Parameters
+        __________
+        substep : compass.Substep
+            the substep to add
+        """
+        self.substeps[substep.name] = substep
+        self.substeps_to_run.append(substep.name)
 
     def add_input_file(self, filename=None, target=None, database=None,
                        url=None, work_dir_target=None, package=None,
