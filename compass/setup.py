@@ -288,6 +288,9 @@ def setup_case(path, test_case, config_file, machine, work_dir, baseline_dir,
         # set up the step
         step.setup()
 
+        for substep in step.substeps.values():
+            substep.setup()
+
         # process input, output, namelist and streams files
         step.process_inputs_and_outputs()
 
@@ -387,8 +390,12 @@ def _get_required_cores(test_cases):
             if step.cores is None:
                 raise ValueError(f'The number of cores was never set for '
                                  f'{test_case.path} step {step_name}')
-            max_cores = max(max_cores, step.cores)
-            max_of_min_cores = max(max_of_min_cores, step.min_cores)
+            for substep_name in step.substeps_to_run:
+                substep = step.substeps[substep_name]
+                cores = substep.cpus_per_task*substep.ntasks
+                min_cores = substep.min_cpus_per_task*substep.min_tasks
+                max_cores = max(max_cores, cores)
+                max_of_min_cores = max(max_of_min_cores, min_cores)
 
     return max_cores, max_of_min_cores
 
