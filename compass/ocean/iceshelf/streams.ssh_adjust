@@ -1,16 +1,16 @@
 <streams>
 
 <immutable_stream name="mesh"
-                  filename_template="adjusting_init.nc"/>
+                  filename_template="{{ in_filename }}"/>
 
 <immutable_stream name="input"
-                  filename_template="adjusting_init.nc"/>
+                  filename_template="{{ in_filename }}"/>
 
 <stream name="output_ssh"
         type="output"
         precision="double"
-        filename_template="output_ssh.nc"
-        output_interval="0000_01:00:00"
+        filename_template="{{ out_filename }}"
+        output_interval="{{ run_duration }}"
         clobber_mode="truncate">
 
     <var name="ssh"/>
