@@ -1,6 +1,6 @@
 from compass.testcase import TestCase
 from compass.ocean.tests.isomip_plus.initial_state import InitialState
-from compass.ocean.tests.isomip_plus.ssh_adjustment import SshAdjustment
+from compass.ocean.tests.isomip_plus.ssh_adjustment import IsomipPlusAdjustment
 from compass.ocean.tests.isomip_plus.forward import Forward
 from compass.ocean.tests.isomip_plus.streamfunction import Streamfunction
 from compass.ocean.tests.isomip_plus.viz import Viz
@@ -72,7 +72,7 @@ class OceanTest(TestCase):
                          vertical_coordinate=vertical_coordinate,
                          time_varying_forcing=time_varying_forcing))
         self.add_step(
-            SshAdjustment(test_case=self, resolution=resolution))
+            IsomipPlusAdjustment(test_case=self, resolution=resolution))
         self.add_step(
             Forward(test_case=self, name='performance', resolution=resolution,
                     experiment=experiment,
@@ -162,24 +162,6 @@ class OceanTest(TestCase):
                 step.cores = cores
                 step.min_cores = min_cores
                 step.threads = 1
-
-    def run(self):
-        """
-        Run each step of the test case
-        """
-        config = self.config
-        # get the these properties from the config options
-        for step_name in self.steps_to_run:
-            if step_name in ['ssh_adjustment', 'performance', 'simulation']:
-                step = self.steps[step_name]
-                # get the these properties from the config options
-                step.cores = config.getint('isomip_plus', 'forward_cores')
-                step.min_cores = config.getint('isomip_plus',
-                                               'forward_min_cores')
-                step.threads = config.getint('isomip_plus', 'forward_threads')
-
-        # run the steps
-        super().run()
 
     def validate(self):
         """

@@ -3,8 +3,9 @@ import shutil
 import xarray
 import time
 
-from compass.model import run_model
+from compass.model import add_model_substeps
 from compass.step import Step
+from compass.substep import Substep
 
 from compass.ocean.tests.isomip_plus.evap import update_evaporation_flux
 from compass.ocean.tests.isomip_plus.viz.plot import MoviePlotter
@@ -54,8 +55,7 @@ class Forward(Step):
         """
         self.resolution = resolution
         self.experiment = experiment
-        super().__init__(test_case=test_case, name=name, subdir=subdir,
-                         cores=None, min_cores=None, threads=None)
+        super().__init__(test_case=test_case, name=name, subdir=subdir)
 
         # make sure output is double precision
         self.add_streams_file('compass.ocean.streams', 'streams.output')
@@ -101,54 +101,97 @@ class Forward(Step):
             filename='forcing_data.nc',
             target='forcing_data_init.nc')
 
-        self.add_model_as_input()
+        add_model_substeps(step=self)
+
+        if name == 'performance':
+            self.add_substep(PlotSubstep(step=self))
+        if name == 'simulation':
+            self.add_substep(UpdateEvapSubstep(step=self))
 
         self.add_output_file('output.nc')
         self.add_output_file('land_ice_fluxes.nc')
 
-    # no setup() is needed
+    def runtime_setup(self):
+        """
+        Set model resources from config options
+        """
+        config = self.config
+        substep = self.substeps['model']
+        cores = config.getint('isomip_plus', 'forward_cores')
+        min_cores = config.getint('isomip_plus', 'forward_min_cores')
+        threads = config.getint('isomip_plus', 'forward_threads')
+        substep.set_model_resources(ntasks=cores, min_tasks=min_cores,
+                                    openmp_threads=threads)
+
+
+class PlotSubstep(Substep):
+    def __init__(self, step):
+        """
+        Make a substep for finishing iterative adjustment of SSH or land-ice
+        pressure
+
+        Parameters
+        ----------
+        step : compass.ocean.tests.isomip_plus.forward.Forward
+            A step that this substep belongs to
+        """
+        super().__init__(step=step, name=f'plot')
+        self.experiment = step.experiment
 
     def run(self):
+        """ Run the substep """
+        # plot a few fields
+        step = self.step
+        plot_folder = '{}/plots'.format(step.work_dir)
+        if os.path.exists(plot_folder):
+            shutil.rmtree(plot_folder)
+
+        ds_mesh = xarray.open_dataset(
+            os.path.join(step.work_dir, 'init.nc'))
+        ds = xarray.open_dataset(os.path.join(step.work_dir, 'output.nc'))
+
+        section_y = step.config.getfloat('isomip_plus_viz', 'section_y')
+        # show progress only if we're not writing to a log file
+        show_progress = step.log_filename is None
+        plotter = MoviePlotter(inFolder=step.work_dir,
+                               streamfunctionFolder=step.work_dir,
+                               outFolder=plot_folder, sectionY=section_y,
+                               dsMesh=ds_mesh, ds=ds, expt=self.experiment,
+                               showProgress=show_progress)
+
+        plotter.plot_3d_field_top_bot_section(
+            ds.temperature, nameInTitle='temperature', prefix='temp',
+            units='C', vmin=-2., vmax=1., cmap='cmo.thermal')
+
+        plotter.plot_3d_field_top_bot_section(
+            ds.salinity, nameInTitle='salinity', prefix='salin',
+            units='PSU', vmin=33.8, vmax=34.7, cmap='cmo.haline')
+
+
+class UpdateEvapSubstep(Substep):
+    def __init__(self, step):
         """
-        Run this step of the test case
+        Make a substep for finishing iterative adjustment of SSH or land-ice
+        pressure
+
+        Parameters
+        ----------
+        step : compass.ocean.tests.isomip_plus.forward.Forward
+            A step that this substep belongs to
         """
-        run_model(self)
+        super().__init__(step=step, name=f'update_evap')
 
-        if self.name == 'performance':
-            # plot a few fields
-            plot_folder = '{}/plots'.format(self.work_dir)
-            if os.path.exists(plot_folder):
-                shutil.rmtree(plot_folder)
+    def run(self):
+        """ Run the substep """
+        step = self.step
 
-            dsMesh = xarray.open_dataset(os.path.join(self.work_dir,
-                                                      'init.nc'))
-            ds = xarray.open_dataset(os.path.join(self.work_dir, 'output.nc'))
+        update_evaporation_flux(in_forcing_file='forcing_data_init.nc',
+                                out_forcing_file='forcing_data_updated.nc',
+                                out_forcing_link='forcing_data.nc')
 
-            section_y = self.config.getfloat('isomip_plus_viz', 'section_y')
-            # show progress only if we're not writing to a log file
-            show_progress = self.log_filename is None
-            plotter = MoviePlotter(inFolder=self.work_dir,
-                                   streamfunctionFolder=self.work_dir,
-                                   outFolder=plot_folder, sectionY=section_y,
-                                   dsMesh=dsMesh, ds=ds, expt=self.experiment,
-                                   showProgress=show_progress)
-
-            plotter.plot_3d_field_top_bot_section(
-                ds.temperature, nameInTitle='temperature', prefix='temp',
-                units='C', vmin=-2., vmax=1., cmap='cmo.thermal')
-
-            plotter.plot_3d_field_top_bot_section(
-                ds.salinity, nameInTitle='salinity', prefix='salin',
-                units='PSU', vmin=33.8, vmax=34.7, cmap='cmo.haline')
-
-        if self.name == 'simulation':
-            update_evaporation_flux(in_forcing_file='forcing_data_init.nc',
-                                    out_forcing_file='forcing_data_updated.nc',
-                                    out_forcing_link='forcing_data.nc')
-
-            replacements = {'config_do_restart': '.true.',
-                            'config_start_time': "'file'"}
-            self.update_namelist_at_runtime(replacements)
+        replacements = {'config_do_restart': '.true.',
+                        'config_start_time': "'file'"}
+        step.update_namelist_at_runtime(replacements)
 
 
 def get_time_steps(resolution):
