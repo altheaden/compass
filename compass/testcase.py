@@ -275,6 +275,8 @@ class TestCase:
         else:
             step_logger = logger
             log_filename = None
+
+        run_substeps_as_commands = step.run_substeps_as_commands
         with LoggingContext(name=test_name, logger=step_logger,
                             log_filename=log_filename) as step_logger:
             step.logger = step_logger
@@ -285,6 +287,13 @@ class TestCase:
                 if substep.args is not None:
                     step_logger.info('')
                     run_command(substep.args, substep.cpus_per_task,
+                                substep.ntasks, substep.openmp_threads,
+                                substep.mem, config, step_logger)
+                    step_logger.info('')
+                elif run_substeps_as_commands:
+                    args = ['compass', 'run', '--substep', substep_name]
+                    step_logger.info('')
+                    run_command(args, substep.cpus_per_task,
                                 substep.ntasks, substep.openmp_threads,
                                 substep.mem, config, step_logger)
                     step_logger.info('')

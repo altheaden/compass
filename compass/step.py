@@ -202,6 +202,7 @@ class Step:
         # these will be set before running the step
         self.logger = None
         self.log_filename = None
+        self.run_substeps_as_commands = True
 
         # output caching
         self.cached = cached
