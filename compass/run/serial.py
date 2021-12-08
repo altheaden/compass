@@ -13,7 +13,7 @@ from compass.config import CompassConfigParser
 
 
 def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
-              steps_not_to_run=None):
+              steps_not_to_run=None, print_substeps=False):
     """
     Run the given test suite or test case
 
@@ -37,6 +37,10 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
     steps_not_to_run : list of str, optional
         A list of steps not to run if this is a test case, not a full suite.
         Typically, these are steps to remove from the defaults
+
+    print_substeps : bool, optional
+        Whether to print the names of substeps as the suite progresses.  Has no
+        effect if ``quiet == True``.
     """
     # ANSI fail text: https://stackoverflow.com/a/287944/7728169
     start_fail = '\033[91m'
@@ -101,12 +105,14 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
                     # just log the step names and any failure messages to the
                     # log file
                     test_case.stdout_logger = test_logger
+                    print_substeps = False
                 else:
                     # log steps to stdout
                     test_case.stdout_logger = logger
                 test_case.logger = test_logger
                 test_case.log_filename = log_filename
                 test_case.new_step_log_file = is_test_case
+                test_case.print_substeps = print_substeps
 
                 os.chdir(test_case.work_dir)
 
@@ -223,7 +229,7 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
             sys.exit(1)
 
 
-def run_step(substep=None):
+def run_step(substep=None, print_substeps=False):
     """
     Used by the framework to run a step when ``compass run`` gets called in the
     step's work directory
@@ -232,11 +238,16 @@ def run_step(substep=None):
     ----------
     substep : str or None, optional
         The name of a substep to run on its own
+
+    print_substeps : bool, optional
+        Whether to print the names of substeps as the suite progresses.  Has no
+        effect if ``quiet == True``.
     """
     with open('step.pickle', 'rb') as handle:
         test_case, step = pickle.load(handle)
     test_case.steps_to_run = [step.name]
     test_case.new_step_log_file = False
+    test_case.print_substeps = print_substeps
 
     if substep is not None:
         step.substeps_to_run = [substep]
@@ -281,24 +292,32 @@ def main():
                              "steps_to_run in the config file for defaults.")
     parser.add_argument("--substep", dest="substep", default=None,
                         help="The substep of a step to run")
+    parser.add_argument("--print_substeps", dest="print_substeps",
+                        action="store_true",
+                        help="If set, substep names are included in the "
+                             "output as the test suite progresses.")
     parser.add_argument("-q", "--quiet", dest="quiet", action="store_true",
                         help="If set, step names are not included in the "
                              "output as the test suite progresses.  Has no "
                              "effect when running test cases or steps on "
                              "their own.")
     args = parser.parse_args(sys.argv[2:])
+    if args.quiet:
+        args.print_substeps = False
     if args.suite is not None:
         run_tests(args.suite, quiet=args.quiet)
     elif os.path.exists('test_case.pickle'):
         run_tests(suite_name='test_case', quiet=args.quiet, is_test_case=True,
-                  steps_to_run=args.steps, steps_not_to_run=args.no_steps)
+                  steps_to_run=args.steps, steps_not_to_run=args.no_steps,
+                  print_substeps=args.print_substeps)
     elif os.path.exists('step.pickle'):
-        run_step(args.substep)
+        run_step(args.substep, print_substeps=args.print_substeps)
     else:
         pickles = glob.glob('*.pickle')
         if len(pickles) == 1:
             suite = os.path.splitext(os.path.basename(pickles[0]))[0]
-            run_tests(suite, quiet=args.quiet)
+            run_tests(suite, quiet=args.quiet,
+                      print_substeps=args.print_substeps)
         elif len(pickles) == 0:
             raise OSError('No pickle files were found. Are you sure this is '
                           'a compass suite, test-case or step work directory?')

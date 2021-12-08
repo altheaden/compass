@@ -122,6 +122,7 @@ class TestCase:
         self.logger = None
         self.log_filename = None
         self.validation = None
+        self.print_substeps = False
 
     def configure(self):
         """
@@ -159,7 +160,8 @@ class TestCase:
 
             self._print_to_stdout('  * step: {}'.format(step_name))
             try:
-                self._run_step(step, self.new_step_log_file)
+                self._run_step(step, self.new_step_log_file,
+                               self.print_substeps)
             except BaseException:
                 self._print_to_stdout('      Failed')
                 raise
@@ -226,7 +228,7 @@ class TestCase:
                 # also write it to the log file
                 self.logger.info(message)
 
-    def _run_step(self, step, new_log_file):
+    def _run_step(self, step, new_log_file, print_substeps):
         """
         Run the requested step
 
@@ -237,6 +239,9 @@ class TestCase:
 
         new_log_file : bool
             Whether to log to a new log file
+
+        print_substeps : bool
+            Whether to print substep names to stdout as the model runs
         """
         logger = self.logger
         config = self.config
@@ -292,6 +297,8 @@ class TestCase:
                             log_filename=log_filename) as step_logger:
             step.logger = step_logger
             for substep_name in step.substeps_to_run:
+                if print_substeps:
+                    self._print_to_stdout(f'    * substep: {substep_name}')
                 substep = step.substeps[substep_name]
                 if substep.args is not None:
                     step_logger.info('')
