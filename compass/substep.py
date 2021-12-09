@@ -145,6 +145,35 @@ class Substep:
         if mem is not None:
             self.mem = mem
 
+    def constrain_resources(self, available_cores):
+        """
+        Constrain ``cpus_per_task`` and ``ntasks`` based on the number of
+        cores available to this substep
+
+        Parameters
+        ----------
+        available_cores : int
+            The total number of cores available to the substep
+        """
+        if self.ntasks == 1:
+            # just one task so only need to worry about cpus_per_task
+            self.cpus_per_task = min(self.cpus_per_task, available_cores)
+            cores = self.cpus_per_task
+        elif self.cpus_per_task == self.min_cpus_per_task:
+            available_tasks = available_cores // self.cpus_per_task
+            self.ntasks = min(self.ntasks, available_tasks)
+            cores = self.ntasks * self.cpus_per_task
+        else:
+            raise ValueError('Unsupported substep configuration in which '
+                             'ntasks > 1 and  '
+                             'cpus_per_task != min_cpus_per_task')
+
+        min_cores = self.min_cpus_per_task * self.min_tasks
+        if cores < min_cores:
+            raise ValueError(
+                f'Available cores ({cores}) is below the minimum of '
+                f'{min_cores} for substep {self.name}')
+
     def setup(self):
         """
         Set up the substep in the work directory.  Typically, setup will be

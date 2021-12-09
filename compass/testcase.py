@@ -252,27 +252,9 @@ class TestCase:
         step.runtime_setup()
         available_cores, _ = get_available_cores_and_nodes(config)
         # need to iterate over all substeps because some substeps make use of
-        # resource constraints from other steps
+        # resource constraints from other substeps
         for substep_name, substep in step.substeps.items():
-            if substep.ntasks == 1:
-                # just one task so only need to worry about cpus_per_task
-                substep.cpus_per_task = min(substep.cpus_per_task,
-                                            available_cores)
-                cores = substep.cpus_per_task
-            elif substep.cpus_per_task == substep.min_cpus_per_task:
-                available_tasks = available_cores//substep.cpus_per_task
-                substep.ntasks = min(substep.ntasks, available_tasks)
-                cores = substep.ntasks*substep.cpus_per_task
-            else:
-                raise ValueError('Unsupported substep configuration in which '
-                                 'ntasks > 1 and  '
-                                 'cpus_per_task != min_cpus_per_task')
-
-            min_cores = substep.min_cpus_per_task*substep.min_tasks
-            if cores < min_cores:
-                raise ValueError(
-                    f'Available cores ({cores}) is below the minimum of '
-                    f'{min_cores} for substep {substep.name}')
+            substep.constrain_resources(available_cores)
 
         missing_files = list()
         for input_file in step.inputs:

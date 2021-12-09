@@ -7,9 +7,10 @@ import glob
 
 from mpas_tools.logging import LoggingContext
 import mpas_tools.io
-from compass.parallel import check_parallel_system, set_cores_per_node
 from compass.logging import log_method_call
 from compass.config import CompassConfigParser
+from compass.parallel import check_parallel_system, set_cores_per_node, \
+    get_available_cores_and_nodes
 
 
 def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
@@ -67,9 +68,9 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
     test_case = next(iter(test_suite['test_cases'].values()))
     config_filename = os.path.join(test_case.work_dir,
                                    test_case.config_filename)
-    config = CompassConfigParser()
-    config.add_from_file(config_filename)
-    check_parallel_system(config)
+    suite_config = CompassConfigParser()
+    suite_config.add_from_file(config_filename)
+    check_parallel_system(suite_config)
 
     # start logging to stdout/stderr
     with LoggingContext(suite_name) as logger:
@@ -116,16 +117,11 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
 
                 os.chdir(test_case.work_dir)
 
-                config = CompassConfigParser()
-                config.add_from_file(test_case.config_filename)
-                test_case.config = config
-                set_cores_per_node(test_case.config)
-
-                mpas_tools.io.default_format = config.get('io', 'format')
-                mpas_tools.io.default_engine = config.get('io', 'engine')
+                _common_setup(test_case)
 
                 test_case.steps_to_run = _update_steps_to_run(
-                    steps_to_run, steps_not_to_run, config, test_case.steps)
+                    steps_to_run, steps_not_to_run, test_case.config,
+                    test_case.steps)
 
                 test_start = time.time()
                 log_method_call(method=test_case.run, logger=test_logger)
@@ -229,16 +225,13 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
             sys.exit(1)
 
 
-def run_step(substep=None, print_substeps=False):
+def run_step(print_substeps=False):
     """
     Used by the framework to run a step when ``compass run`` gets called in the
     step's work directory
 
     Parameters
     ----------
-    substep : str or None, optional
-        The name of a substep to run on its own
-
     print_substeps : bool, optional
         Whether to print the names of substeps as the suite progresses.  Has no
         effect if ``quiet == True``.
@@ -249,33 +242,51 @@ def run_step(substep=None, print_substeps=False):
     test_case.new_step_log_file = False
     test_case.print_substeps = print_substeps
 
-    if substep is not None:
-        step.substeps_to_run = [substep]
-
-    config = CompassConfigParser()
-    config.add_from_file(step.config_filename)
-
-    check_parallel_system(config)
-
-    test_case.config = config
-    set_cores_per_node(test_case.config)
-
-    mpas_tools.io.default_format = config.get('io', 'format')
-    mpas_tools.io.default_engine = config.get('io', 'engine')
+    _common_setup(test_case)
 
     # start logging to stdout/stderr
-    test_name = step.path.replace('/', '_')
-    with LoggingContext(name=test_name) as logger:
+    with LoggingContext(name=step.name) as logger:
         test_case.logger = logger
         test_case.stdout_logger = None
-        log_method_call(method=test_case.run, logger=logger)
-        logger.info('')
         test_case.run()
+        test_case.validate()
+
+
+def run_substep(substep_name):
+    """
+    Used by the framework to run a substep when ``compass run`` gets called in
+    the step's work directory with a single substep requested
+
+    Parameters
+    ----------
+    substep_name : str
+        The name of a substep to run on its own
+    """
+    with open('step.pickle', 'rb') as handle:
+        test_case, step = pickle.load(handle)
+
+    _common_setup(test_case)
+
+    # start logging to stdout/stderr
+    with LoggingContext(name=substep_name) as logger:
+        test_case.logger = logger
+
+        step.logger = logger
+
+        step.runtime_setup()
+
+        available_cores, _ = get_available_cores_and_nodes(test_case.config)
+        # need to iterate over all substeps because some substeps make use of
+        # resource constraints from other substeps
+        for substep in step.substeps.values():
+            substep.constrain_resources(available_cores)
+
+        substep = step.substeps[substep_name]
 
         logger.info('')
-        log_method_call(method=test_case.validate, logger=logger)
+        log_method_call(method=substep.run, logger=logger)
         logger.info('')
-        test_case.validate()
+        substep.run()
 
 
 def main():
@@ -311,7 +322,10 @@ def main():
                   steps_to_run=args.steps, steps_not_to_run=args.no_steps,
                   print_substeps=args.print_substeps)
     elif os.path.exists('step.pickle'):
-        run_step(args.substep, print_substeps=args.print_substeps)
+        if args.substep is None:
+            run_step(print_substeps=args.print_substeps)
+        else:
+            run_substep(args.substep)
     else:
         pickles = glob.glob('*.pickle')
         if len(pickles) == 1:
@@ -349,3 +363,17 @@ def _update_steps_to_run(steps_to_run, steps_not_to_run, config, steps):
                         steps_not_to_run]
 
     return steps_to_run
+
+
+def _common_setup(test_case):
+    """Some setup common to running a test case, step or substep"""
+    config = CompassConfigParser()
+    config.add_from_file(test_case.config_filename)
+
+    check_parallel_system(config)
+
+    test_case.config = config
+    set_cores_per_node(test_case.config)
+
+    mpas_tools.io.default_format = config.get('io', 'format')
+    mpas_tools.io.default_engine = config.get('io', 'engine')
