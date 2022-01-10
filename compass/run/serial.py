@@ -10,6 +10,7 @@ import mpas_tools.io
 from compass.parallel import check_parallel_system, set_cores_per_node
 from compass.logging import log_method_call
 from compass.config import CompassConfigParser
+from compass.run import common_setup
 
 
 def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
@@ -110,13 +111,7 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
 
                 os.chdir(test_case.work_dir)
 
-                config = CompassConfigParser()
-                config.add_from_file(test_case.config_filename)
-                test_case.config = config
-                set_cores_per_node(test_case.config)
-
-                mpas_tools.io.default_format = config.get('io', 'format')
-                mpas_tools.io.default_engine = config.get('io', 'engine')
+                common_setup(test_case)
 
                 test_case.steps_to_run = _update_steps_to_run(
                     steps_to_run, steps_not_to_run, config, test_case.steps)
@@ -241,16 +236,7 @@ def run_step(step_is_subprocess=False):
     if step_is_subprocess:
         step.run_as_subprocess = False
 
-    config = CompassConfigParser()
-    config.add_from_file(step.config_filename)
-
-    check_parallel_system(config)
-
-    test_case.config = config
-    set_cores_per_node(test_case.config)
-
-    mpas_tools.io.default_format = config.get('io', 'format')
-    mpas_tools.io.default_engine = config.get('io', 'engine')
+    common_setup(test_case)
 
     # start logging to stdout/stderr
     test_name = step.path.replace('/', '_')
