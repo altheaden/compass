@@ -284,13 +284,13 @@ class TestCase:
                 if print_substeps:
                     self._print_to_stdout(f'    * substep: {substep_name}')
                 substep = step.substeps[substep_name]
-                if substep.args is not None:
+                if substep.args is not None:  # todo: bash app
                     step_logger.info('')
                     run_command(substep.args, substep.cpus_per_task,
                                 substep.ntasks, substep.openmp_threads,
                                 substep.mem, config, step_logger)
                     step_logger.info('')
-                elif run_substeps_as_commands:
+                elif run_substeps_as_commands:  # todo: bash app
                     args = ['compass', 'run', '--substep', substep_name]
                     step_logger.info('')
                     run_command(args, substep.cpus_per_task,

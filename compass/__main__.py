@@ -7,6 +7,7 @@ import os
 from compass import list, setup, clean, suite, cache
 from compass.version import __version__
 import compass.run.serial as run_serial
+from compass.run import parallel
 
 
 def main():
@@ -50,7 +51,8 @@ The available compass commands are:
                 'setup': setup.main,
                 'clean': clean.main,
                 'suite': suite.main,
-                'run': run_serial.main}
+                'run': run_serial.main,
+                'run_p': parallel.main}
     if allow_cache:
         commands['cache'] = cache.main
 

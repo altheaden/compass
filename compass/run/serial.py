@@ -6,11 +6,11 @@ import time
 import glob
 
 from mpas_tools.logging import LoggingContext
-import mpas_tools.io
 from compass.logging import log_method_call
 from compass.config import CompassConfigParser
-from compass.parallel import check_parallel_system, set_cores_per_node, \
+from compass.parallel import check_parallel_system, \
     get_available_cores_and_nodes
+from compass.run import common_setup
 
 
 def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
@@ -117,7 +117,7 @@ def run_tests(suite_name, quiet=False, is_test_case=False, steps_to_run=None,
 
                 os.chdir(test_case.work_dir)
 
-                _common_setup(test_case)
+                common_setup(test_case)
 
                 test_case.steps_to_run = _update_steps_to_run(
                     steps_to_run, steps_not_to_run, test_case.config,
@@ -242,7 +242,7 @@ def run_step(print_substeps=False):
     test_case.new_step_log_file = False
     test_case.print_substeps = print_substeps
 
-    _common_setup(test_case)
+    common_setup(test_case)
 
     # start logging to stdout/stderr
     with LoggingContext(name=step.name) as logger:
@@ -265,7 +265,7 @@ def run_substep(substep_name):
     with open('step.pickle', 'rb') as handle:
         test_case, step = pickle.load(handle)
 
-    _common_setup(test_case)
+    common_setup(test_case)
 
     # start logging to stdout/stderr
     with LoggingContext(name=substep_name) as logger:
@@ -364,16 +364,3 @@ def _update_steps_to_run(steps_to_run, steps_not_to_run, config, steps):
 
     return steps_to_run
 
-
-def _common_setup(test_case):
-    """Some setup common to running a test case, step or substep"""
-    config = CompassConfigParser()
-    config.add_from_file(test_case.config_filename)
-
-    check_parallel_system(config)
-
-    test_case.config = config
-    set_cores_per_node(test_case.config)
-
-    mpas_tools.io.default_format = config.get('io', 'format')
-    mpas_tools.io.default_engine = config.get('io', 'engine')
