@@ -18,18 +18,14 @@ from compass.parallel import check_parallel_system, set_cores_per_node
 from compass.run import common_setup
 
 
-def run_suite(suite_name):
+def run_polaris(suite_name):  # todo: I was excited and renamed this
     """
-    Run the given test suite
+    Run the given test suite in task parallel
 
     Parameters
     ----------
     suite_name : str
         The name of the test suite
-
-    quiet : bool, optional
-        Whether step names are not included in the output as the test suite
-        progresses
     """
     # ANSI fail text: https://stackoverflow.com/a/287944/7728169
     start_fail = '\033[91m'
@@ -112,16 +108,13 @@ def run_suite(suite_name):
                         log_filename="validation.log") as valid_logger:
                     test_case.logger = valid_logger
                     try:
-                        test_case.validate()
+                        test_case.validate()  # todo: make this a substep
                     except BaseException:
                         run_status = error_str
                         test_pass = False
-                        # todo: not sure if the logging is set up correctly,
-                        # todo: wondering if it should be valid_logger here
-                        # stdout_logger.exception(
-                        #     'Exception raised in validate()')
                         valid_logger.exception(
                             'Exception raised in validate()')
+            # todo: log file concatenation could go here
 
             baseline_status = None
             internal_status = None
