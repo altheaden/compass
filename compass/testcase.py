@@ -224,7 +224,7 @@ class TestCase:
         """
         if self.stdout_logger is not None:
             self.stdout_logger.info(message)
-            if self.logger != self.stdout_logger:
+            if self.logger != self.stdout_logger:  # todo: not important for parallel
                 # also write it to the log file
                 self.logger.info(message)
 
@@ -313,3 +313,87 @@ class TestCase:
                 'output file(s) missing in step {} of {}/{}/{}: {}'.format(
                     step.name, step.mpas_core.name, step.test_group.name,
                     step.test_case.subdir, missing_files))
+
+    def _create_step_futures(self, step):  # todo: finish
+        """
+        Run the requested step  # todo: update documentation
+
+        Parameters
+        ----------
+        step : compass.Step
+            The step to run
+        """
+        # logger = self.logger  # todo: possibly unnecessary
+        config = self.config
+        cwd = os.getcwd()
+        os.chdir(step.work_dir)
+        # this call may update the resources for substeps based on config
+        # options so we need to run it before we determine the resources
+        step.runtime_setup()
+        available_cores, _ = get_available_cores_and_nodes(config)  # todo: double check parallel compatibility
+        # need to iterate over all substeps because some substeps make use of
+        # resource constraints from other substeps
+        for substep_name, substep in step.substeps.items():
+            substep.constrain_resources(available_cores)
+
+        missing_files = list()  # todo: something with data futures
+        for input_file in step.inputs:
+            if not os.path.exists(input_file):
+                missing_files.append(input_file)
+
+        if len(missing_files) > 0:
+            raise OSError(
+                'input file(s) missing in step {} of {}/{}/{}: {}'.format(
+                    step.name, step.mpas_core.name, step.test_group.name,
+                    step.test_case.subdir, missing_files))
+
+        test_name = step.path.replace('/', '_')
+        log_filename = f'{cwd}/{step.name}.log'
+        step.log_filename = log_filename
+
+        run_substeps_as_commands = step.run_substeps_as_commands
+        with LoggingContext(name=test_name,
+                            log_filename=log_filename) as step_logger:
+            step.logger = step_logger
+            for substep_name in step.substeps_to_run:
+                substep = step.substeps[substep_name]
+
+                # # todo: add functionality from else clause; send additional arguments
+                # args = substep.args
+                # if args is None:
+                #     args = ['compass', 'run', '--substep', substep_name]
+                # _launch_substeps(inputs=args, stdout=step_logger,
+                #                  stderr=step_logger)
+                if substep.args is not None:  # todo: bash app
+                    run_command(substep.args, substep.cpus_per_task,  # todo: bash app equivalent of run_command
+                                substep.ntasks, substep.openmp_threads,
+                                substep.mem, config, step_logger)
+                elif run_substeps_as_commands:  # todo: bash app
+                    args = ['compass', 'run', '--substep', substep_name]
+                    run_command(args, substep.cpus_per_task,
+                                substep.ntasks, substep.openmp_threads,
+                                substep.mem, config, step_logger)
+                else:
+                    substep.run()
+
+        missing_files = list()  # todo: the rest of the stuff with data futures
+        for output_file in step.outputs:
+            if not os.path.exists(output_file):
+                missing_files.append(output_file)
+
+        if len(missing_files) > 0:
+            raise OSError(
+                'output file(s) missing in step {} of {}/{}/{}: {}'.format(
+                    step.name, step.mpas_core.name, step.test_group.name,
+                    step.test_case.subdir, missing_files))
+
+
+# @bash_app
+def _launch_substeps(inputs=[], stdout="std.out", stderr="std.err"):  # todo: provide default logger?
+    pass
+
+# todo: bash app thoughts / questions:
+# Should bash app exist in testcase, or should it exist in compass.parallel?
+# What is the purpose of run_substeps_as_commands, and the general structure
+# to the if / elif / else loop that runs the substeps? Does substep.run() need
+# to be called in some cases, or should all executions go through the bash app?
