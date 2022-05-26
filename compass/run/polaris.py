@@ -190,7 +190,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='Run a test suite, test case or step',
-        prog='compass run')
+        prog='polaris')
     parser.add_argument("suite", nargs='?', default=None,
                         help="The name of a test suite to run. Can exclude "
                              "or include the .pickle filename suffix.")
@@ -226,7 +226,7 @@ def main():
     # dfk = parsl.load(executor)  # Parsl data flow kernel
 
     if args.suite is not None:
-        run_suite(args.suite)
+        run_polaris(args.suite)
     elif os.path.exists('test_case.pickle'):  # todo: Issues when re-running test
         raise OSError("Not implemented for task parallel execution, run in "
                       "serial instead.")
@@ -237,7 +237,7 @@ def main():
         pickles = glob.glob('*.pickle')
         if len(pickles) == 1:
             suite = os.path.splitext(os.path.basename(pickles[0]))[0]
-            run_suite(suite)
+            run_polaris(suite)
         elif len(pickles) == 0:
             raise OSError('No pickle files were found. Are you sure this is '
                           'a compass suite, test-case or step work directory?')
