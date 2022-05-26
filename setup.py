@@ -80,4 +80,5 @@ setup(name='compass',
       install_requires=install_requires,
       entry_points={'console_scripts':
                     ['compass = compass.__main__:main',
+                     'polaris = compass.run.polaris:main',
                      'create_compass_load_script=compass.load:main']})
