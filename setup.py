@@ -28,6 +28,7 @@ install_requires = \
      'matplotlib',
      'netcdf4',
      'numpy',
+     'parsl',
      'progressbar2',
      'pyamg',
      'requests',
