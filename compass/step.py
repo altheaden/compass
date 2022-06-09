@@ -137,6 +137,14 @@ class Step:
 
     args : {list of str, None}
         A list of command-line arguments to call in parallel
+
+    output_data_futures : dict
+        Dictionary of parsl.app.futures.DataFuture with output filenames as
+        keys
+
+    input_data_futures : dict
+        Dictionary of parsl.app.futures.DataFuture with input filenames as
+        keys
     """
 
     def __init__(self, test_case, name, subdir=None, cpus_per_task=1,
@@ -239,6 +247,10 @@ class Step:
 
         # output caching
         self.cached = cached
+
+        # these happen in polaris when running in task parallel
+        self.output_data_futures = None
+        self.input_data_futures = None
 
     def set_resources(self, cpus_per_task=None, min_cpus_per_task=None,
                       ntasks=None, min_tasks=None, openmp_threads=None,

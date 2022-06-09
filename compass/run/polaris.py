@@ -9,6 +9,8 @@ import parsl
 from parsl.config import Config
 from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
+from parsl.data_provider.files import File
+
 from parsl import python_app
 from parsl import bash_app
 
@@ -60,6 +62,8 @@ def run_polaris(suite_name):  # todo: I was excited and renamed this
     with LoggingContext(suite_name) as stdout_logger:
 
         os.environ['PYTHONUNBUFFERED'] = '1'
+
+        _setup_data_futures(test_suite['test_cases'])
 
         failures = 0
         cwd = os.getcwd()
@@ -273,3 +277,30 @@ def _create_executor(partition='compute', nodes=1, walltime='00:10:00',
 
     parsl.clear()  # todo: necessary?
     return config
+
+
+def _setup_data_futures(test_cases):
+    """
+
+    Parameters
+    ----------
+    test_cases
+
+    """
+    output_data_futures = dict()
+    for test_name, test_case in test_cases.items():
+        for step_name, step in test_case.steps:
+            print(test_name, step_name)
+            step.output_data_futures = dict()
+            for output_file in step.outputs:
+                output_data_future = File(output_file)
+                step.output_data_futures[output_file] = output_data_future
+                output_data_futures[output_file] = output_data_future
+
+    for test_name, test_case in test_cases.items():
+        for step_name, step in test_case.steps:
+            print(test_name, step_name)
+            step.input_data_futures = dict()
+            for input_file in step.inputs:
+                input_data_future = output_data_futures[input_file]
+                step.input_data_futures[input_file] = input_data_future
