@@ -1,15 +1,6 @@
-import argparse
-import sys
-import os
-import pickle
-import configparser
-import time
-import glob
-
-from mpas_tools.logging import LoggingContext
 import mpas_tools.io
-from compass.parallel import check_parallel_system, set_cores_per_node, \
-    get_available_cores_and_nodes
+from compass.parallel import check_parallel_system, set_cores_per_node
+from compass.config import CompassConfigParser
 
 
 def common_setup(test_case):  # todo: update docstring
