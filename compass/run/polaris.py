@@ -191,32 +191,28 @@ def main():
     parser = argparse.ArgumentParser(
         description='Run a test suite, test case or step',
         prog='polaris')
-    parser.add_argument("suite", nargs='?', default=None,
+    parser.add_argument("suite", nargs='?',
                         help="The name of a test suite to run. Can exclude "
                              "or include the .pickle filename suffix.")
-    parser.add_argument("--steps", dest="steps", nargs='+', default=None,
+    parser.add_argument("--steps", dest="steps", nargs='+',
                         help="The steps of a test case to run")
-    parser.add_argument("--no-steps", dest="no_steps", nargs='+', default=None,
+    parser.add_argument("--no-steps", dest="no_steps", nargs='+',
                         help="The steps of a test case not to run, see "
                              "steps_to_run in the config file for defaults.")
-    parser.add_argument("--substep", dest="substep", default=None,
+    parser.add_argument("--substep", dest="substep",
                         help="The substep of a step to run")
     # Task Parallel arguments
-    parser.add_argument("-N", "--nodes", dest="nodes", type=int, metavar="N",
-                        # required=True,  # todo: having both required & default seems redundant
+    parser.add_argument("-N", "--nodes", dest="nodes", type=int, default=1,
                         help="The number of nodes to run on.")
-    parser.add_argument("-t", "--walltime", dest="walltime", default=None,
-                        metavar="HH:MM:SS",  # required=True,
+    parser.add_argument("-t", "--walltime", dest="walltime",
+                        metavar="HH:MM:SS", default='01:00:00',
                         help="The requested walltime in HH:MM:SS.")
-    parser.add_argument("-p", "--partition", dest="partition", default=None,
-                        # required=True,
+    parser.add_argument("-p", "--partition", dest="partition",
                         help="The name of the partition to run on.")
-    parser.add_argument("--qos", dest="qos", default=None,
+    parser.add_argument("--qos", dest="qos",
                         help="The requested quality of service.")
-    # todo: finish; Not sure what this option is for / what it's supposed to do
-    parser.add_argument("--configuration", dest="configuration",
-                        default=None,
-                        help="Configuration.")
+    parser.add_argument("--constraint", dest="constraint",
+                        help="Constraint.")
     parser.add_argument("-A", "--account", dest="account",
                         help="The Slurm account to charge resources to.")
 
