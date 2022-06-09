@@ -149,6 +149,7 @@ class TestCase:
         """
         logger = self.logger
         cwd = os.getcwd()
+        self.prepare_steps_to_run()
         for step_name in self.steps_to_run:
             step = self.steps[step_name]
             if step.cached:
@@ -217,6 +218,23 @@ class TestCase:
             if both_pass:
                 raise ValueError('Comparison failed, see above.')
 
+    def prepare_steps_to_run(self):
+        config = self.config
+        available_cores, _ = get_available_cores_and_nodes(config)
+
+        for step_name in self.steps_to_run:
+            step = self.steps[step_name]
+            if step.cached:
+                continue
+
+            # this call may update the resources for substeps based on config
+            # options so we need to run it before we determine the resources
+            step.runtime_setup()
+            # need to iterate over all substeps because some substeps make use of
+            # resource constraints from other substeps
+            for substep_name, substep in step.substeps.items():
+                substep.constrain_resources(available_cores)
+
     def _print_to_stdout(self, message):
         """
         write out a message to stdout if we're not running a single step on its
@@ -247,14 +265,6 @@ class TestCase:
         config = self.config
         cwd = os.getcwd()
         os.chdir(step.work_dir)
-        # this call may update the resources for substeps based on config
-        # options so we need to run it before we determine the resources
-        step.runtime_setup()
-        available_cores, _ = get_available_cores_and_nodes(config)
-        # need to iterate over all substeps because some substeps make use of
-        # resource constraints from other substeps
-        for substep_name, substep in step.substeps.items():
-            substep.constrain_resources(available_cores)
 
         missing_files = list()
         for input_file in step.inputs:
@@ -284,13 +294,13 @@ class TestCase:
                 if print_substeps:
                     self._print_to_stdout(f'    * substep: {substep_name}')
                 substep = step.substeps[substep_name]
-                if substep.args is not None:  # todo: bash app
+                if substep.args is not None:
                     step_logger.info('')
                     run_command(substep.args, substep.cpus_per_task,
                                 substep.ntasks, substep.openmp_threads,
                                 substep.mem, config, step_logger)
                     step_logger.info('')
-                elif run_substeps_as_commands:  # todo: bash app
+                elif run_substeps_as_commands:
                     args = ['compass', 'run', '--substep', substep_name]
                     step_logger.info('')
                     run_command(args, substep.cpus_per_task,
