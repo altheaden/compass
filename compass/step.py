@@ -107,6 +107,14 @@ class Step:
     cached : bool
         Whether to get all of the outputs for the step from the database of
         cached outputs for this MPAS core
+
+    output_data_futures : dict
+        Dictionary of parsl.app.futures.DataFuture with output filenames as
+        keys
+
+    input_data_futures : dict
+        Dictionary of parsl.app.futures.DataFuture with input filenames as
+        keys
     """
 
     def __init__(self, test_case, name, subdir=None, cpus_per_task=1,
@@ -206,6 +214,9 @@ class Step:
 
         # output caching
         self.cached = cached
+
+        self.output_data_futures = None
+        self.input_data_futures = None
 
     def setup(self):
         """
