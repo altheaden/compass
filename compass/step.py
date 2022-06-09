@@ -210,7 +210,8 @@ class Step:
         # these will be set before running the step
         self.logger = None
         self.log_filename = None
-        self.run_substeps_as_commands = True
+        # can be set to true to mimic the way polaris runs test cases in serial
+        self.run_substeps_as_commands = False
 
         # output caching
         self.cached = cached
