@@ -1,4 +1,4 @@
-./runinfo
-./inputs
-./outputs
+runinfo/*
+inputs/*
+outputs/*
 
