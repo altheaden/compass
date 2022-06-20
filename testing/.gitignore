@@ -3,4 +3,5 @@ inputs/*
 outputs/*
 *.sh
 std.*
+out.txt
 
