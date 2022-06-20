@@ -54,7 +54,7 @@ def main():
 
 
 @bash_app
-def echo_hello(stderr='std.err', stdout='std.out'):
+def echo_hello(stderr='out.txt', stdout='out.txt'):
     return 'echo "Hello World!"'
 
 
