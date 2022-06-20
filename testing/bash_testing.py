@@ -13,6 +13,8 @@ from parsl.config import Config
 from parsl.app.app import bash_app
 from parsl.providers import LocalProvider
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import SlurmProvider
+from parsl.launchers import SrunLauncher
 
 
 def main():
@@ -57,11 +59,22 @@ def echo_hello(stderr='std.err', stdout='std.out'):
 
 
 def _create_executor():
+    activation_script = os.environ['LOAD_COMPASS_ENV']
+    worker_init = f'source {activation_script}'
     config = Config(
-        executors=[
-            HighThroughputExecutor(
-                provider=LocalProvider()
-            )])
+        executors=[HighThroughputExecutor(
+            provider=SlurmProvider(
+                partition='acme-small',
+                walltime='01:00:00',
+                nodes_per_block=1,
+                init_blocks=1,
+                worker_init=worker_init,
+                launcher=SrunLauncher(),
+                cmd_timeout=120,
+                account='condo'
+            )
+        )]
+    )
 
     return config
 
