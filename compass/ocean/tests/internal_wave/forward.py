@@ -1,8 +1,7 @@
-from compass.model import run_model
-from compass.step import Step
+from compass.model import ModelStep
 
 
-class Forward(Step):
+class Forward(ModelStep):
     """
     A step for performing forward MPAS-Ocean runs as part of internal wave
     test cases.
@@ -47,7 +46,7 @@ class Forward(Step):
                                'namelist.forward')
         if nu is not None:
             # update the viscosity to the requested value
-            options = {'config_mom_del2': '{}'.format(nu)}
+            options = {'config_mom_del2': f'{nu}'}
             self.add_namelist_options(options)
 
         self.add_streams_file('compass.ocean.tests.internal_wave',
@@ -56,18 +55,10 @@ class Forward(Step):
         self.add_input_file(filename='init.nc',
                             target='../initial_state/ocean.nc')
         self.add_input_file(filename='mesh.nc',
-                            target='../initial_state/culled_mesh.nc')
+                            target='../mesh/culled_mesh.nc')
         self.add_input_file(filename='graph.info',
-                            target='../initial_state/culled_graph.info')
-
-        self.add_model_as_input()
+                            target='../mesh/culled_graph.info')
 
         self.add_output_file(filename='output.nc')
 
     # no setup() is needed
-
-    def run(self):
-        """
-        Run this step of the test case
-        """
-        run_model(self)
