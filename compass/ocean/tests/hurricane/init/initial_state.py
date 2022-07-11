@@ -1,8 +1,7 @@
-from compass.model import run_model
-from compass.step import Step
+from compass.model import ModelStep
 
 
-class InitialState(Step):
+class InitialState(ModelStep):
     """
     A step for creating a mesh and initial condition for hurricane
     test cases
@@ -48,8 +47,6 @@ class InitialState(Step):
             filename='graph.info',
             work_dir_target=f'{mesh_path}/culled_graph.info')
 
-        self.add_model_as_input()
-
         for file in ['ocean.nc', 'graph.info']:
             self.add_output_file(filename=file)
 
@@ -63,9 +60,3 @@ class InitialState(Step):
         self.ntasks = config.getint('hurricane', 'init_ntasks')
         self.min_tasks = config.getint('hurricane', 'init_min_tasks')
         self.openmp_threads = config.getint('hurricane', 'init_threads')
-
-    def run(self):
-        """
-        Run this step of the testcase
-        """
-        run_model(self)
