@@ -18,10 +18,10 @@ class InitialState(ModelStep):
                          min_tasks=1, openmp_threads=1)
 
         self.add_namelist_file('compass.ocean.tests.internal_wave',
-                               'namelist.init', mode='init')
+                               'namelist.init')
 
         self.add_streams_file('compass.ocean.tests.internal_wave',
-                              'streams.init', mode='init')
+                              'streams.init')
 
         self.add_input_file(filename='culled_mesh.nc',
                             target='../mesh/culled_mesh.nc')
