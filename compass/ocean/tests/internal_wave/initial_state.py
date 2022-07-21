@@ -29,7 +29,7 @@ class InitialState(ModelStep):
                             target='../mesh/culled_graph.info')
 
         self.add_output_file('ocean.nc')
-        self.add_output_file('init_mode_forcing_data.nc')  # todo: check if really output
+        # self.add_output_file('init_mode_forcing_data.nc')  # todo: check if really output
 
     def runtime_setup(self):
         """
