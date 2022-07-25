@@ -53,7 +53,7 @@ class Forward(ModelStep):
                               'streams.forward')
 
         self.add_input_file(filename='init.nc',
-                            target='../initial_state/ocean.nc')
+                            target='../mesh/ocean.nc')
         self.add_input_file(filename='mesh.nc',
                             target='../mesh/culled_mesh.nc')
         self.add_input_file(filename='graph.info',

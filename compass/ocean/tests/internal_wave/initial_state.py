@@ -23,13 +23,14 @@ class InitialState(ModelStep):
         self.add_streams_file('compass.ocean.tests.internal_wave',
                               'streams.init')
 
+        self.add_input_file(filename='base_mesh.nc',
+                            target='../mesh/base_mesh.nc')
         self.add_input_file(filename='culled_mesh.nc',
                             target='../mesh/culled_mesh.nc')
+        self.add_input_file(filename='ocean.nc',
+                            target='../mesh/ocean.nc')
         self.add_input_file(filename='graph.info',
                             target='../mesh/culled_graph.info')
-
-        self.add_output_file('ocean.nc')
-        # self.add_output_file('init_mode_forcing_data.nc')  # todo: check if really output
 
     def runtime_setup(self):
         """
