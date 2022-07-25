@@ -36,6 +36,7 @@ class InitialState(ModelStep):
         """
         Get the vertical coordinate from config options
         """
+        super().runtime_setup()
         replacements = dict()
         replacements['config_periodic_planar_vert_levels'] = \
             self.config.getfloat('vertical_grid', 'vert_levels')
