@@ -25,7 +25,7 @@ class Mesh(Step):
         super().__init__(test_case=test_case, name='mesh', ntasks=1,
                          min_tasks=1, openmp_threads=1)
 
-        for file in ['base_mesh.nc', 'culled_mesh.nc', 'culled_graph.info']:
+        for file in ['culled_mesh.nc', 'culled_graph.info']:
             self.add_output_file(file)
 
     def run(self):
