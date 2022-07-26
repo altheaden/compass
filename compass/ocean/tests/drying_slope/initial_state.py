@@ -38,6 +38,7 @@ class InitialState(ModelStep):
         """
         Set the number of layers based on the coordinate type
         """
+        super().runtime_setup()
         section = self.config['vertical_grid']
         coord_type = self.coord_type
         if coord_type == 'single_layer':
