@@ -1,6 +1,0 @@
-<streams>
-
-<stream name="output"
-		output_interval="{{ output_interval }}"/>
-
-</streams>

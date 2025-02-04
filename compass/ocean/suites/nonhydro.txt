@@ -1,2 +1,0 @@
-ocean/nonhydro/solitary_wave
-ocean/nonhydro/stratified_seiche

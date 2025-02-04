@@ -1,6 +1,0 @@
-<streams>
-
-<stream name="output"
-        output_interval="0000-00-01_00:00:00"/>
-
-</streams>

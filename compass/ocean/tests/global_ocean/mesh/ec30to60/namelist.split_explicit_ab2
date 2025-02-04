@@ -1,8 +1,0 @@
-config_time_integrator = 'split_explicit_ab2'
-config_dt = '00:05:00'
-config_btr_dt = '00:00:10'
-config_run_duration = '0000_00:15:00'
-config_mom_del2 = 1000.0
-config_mom_del4 = 1.2e11
-config_hmix_scaleWithMesh = .true.
-config_use_GM = .true.

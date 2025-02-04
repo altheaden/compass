@@ -1,6 +1,0 @@
-<streams>
-
-<stream name="output_ssh"
-        io_type="pnetcdf,cdf5"/>
-
-</streams>

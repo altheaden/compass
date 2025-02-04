@@ -1,6 +1,0 @@
-<streams>
-
-<immutable_stream name="land_ice_forcing"
-                  filename_template="land_ice_forcing.nc"/>
-
-</streams>
